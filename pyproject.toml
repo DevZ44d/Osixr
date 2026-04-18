@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "osixr"
+version = "1.0.0"
+license = "MIT"
+description = "Hunt down social media accounts by username across social networks"
+readme = "README.md"
+keywords = [ "osint", "reconnaissance", "information gathering" ]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security"
+]
+
+requires-python = ">=3.8"
+authors = [
+    { name = "AhMed", email = "alexcrow221@gmail.com" }
+]
+dependencies = [
+    "aiohttp",
+    "requests",
+    "colorama"
+]
+
+[project.urls]
+"Changelog" = "https://github.com/DevZ44d/osixr/blob/main/README.md"
+"Homepage" = "https://github.com/DevZ44d/osixr.git"
+"Repository" = "https://github.com/DevZ44d/osixr.git"
+"Bug Tracker" = "https://github.com/DevZ44d/osixr/issues"
+"Community" = "https://t.me/PyCodz_Chat"
+
+[project.scripts]
+osixr = "osixr.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
