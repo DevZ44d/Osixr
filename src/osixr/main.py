@@ -23,19 +23,26 @@ class IPlock(AsyncFetchDict):
         self.color = Color()
         self.banner = BannerSplitLines()
 
-    async def get(self, banner: bool = True):
-        re = self.banner.random_banner()
+    async def get(self, banner: bool = True, void_firewall: bool = False):
+        banner_text = self.banner.random_banner()
         try:
+            result = await self.analyze(void_firewall=void_firewall)
+            formatted = json.dumps(
+                result,
+                indent=2,
+                ensure_ascii=False
+            )
+
             if banner:
-                return str(self.banner.show_banner(re)) + "\n" + json.dumps(
-                    await self.analyze(), indent=2, ensure_ascii=False
-                )
-            else:
-                return json.dumps(
-                    await self.analyze(), indent=2, ensure_ascii=False
-                )
+                return f"{self.banner.show_banner(banner_text)}\n{formatted}"
+
+            return formatted
         except Exception as e:
-            return e
+            return json.dumps(
+                {"error": str(e)},
+                indent=2,
+                ensure_ascii=False
+            )
 
 
 
