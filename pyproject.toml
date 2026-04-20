@@ -4,9 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "osixr"
-version = "1.0.0"
+version = "2.0.0"
 license = "MIT"
-description = "Hunt down social media accounts by username across social networks"
+description = "Python library designed for OSINT, information gathering."
 readme = "README.md"
 keywords = [ "osint", "reconnaissance", "information gathering" ]
 classifiers = [
