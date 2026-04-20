@@ -1,0 +1,40 @@
+services:
+
+  # ── one-shot commands ─────────────────────────────────────────
+  osixr:
+    build: .
+    image: osixr:latest
+    # Mount current directory so you can pass local image files
+    volumes:
+      - .:/data
+    # Override CMD at runtime:
+    #   docker compose run osixr ip 8.8.8.8
+    #   docker compose run osixr exif photo.jpg
+    #   docker compose run osixr batch 8.8.8.8 1.1.1.1
+
+  # ── ip lookup shortcut ─────────────────────────────────────────
+  ip:
+    build: .
+    image: osixr:latest
+    volumes:
+      - .:/data
+    entrypoint: ["python", "-m", "osixr", "ip"]
+    # Usage: docker compose run ip 8.8.8.8
+
+  # ── exif shortcut ──────────────────────────────────────────────
+  exif:
+    build: .
+    image: osixr:latest
+    volumes:
+      - .:/data
+    entrypoint: ["python", "-m", "osixr", "exif"]
+    # Usage: docker compose run exif photo.jpg --section gps
+
+  # ── vpn shortcut ───────────────────────────────────────────────
+  vpn:
+    build: .
+    image: osixr:latest
+    volumes:
+      - .:/data
+    entrypoint: ["python", "-m", "osixr", "vpn"]
+    # Usage: docker compose run vpn 196.219.54.141
