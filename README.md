@@ -2,8 +2,6 @@
 
 <img src="https://github.com/user-attachments/assets/ca710e96-a798-4267-a7a6-bc63b3a7e44e" width="400">
 
-### OSIXR
-
 **A Python toolkit for OSINT (IP intelligence & image EXIF metadata extraction & Etc-Soon)**
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=flat-square&logo=python)](https://www.python.org/)
@@ -11,8 +9,8 @@
 [![aiohttp](https://img.shields.io/badge/aiohttp-async-orange?style=flat-square)](https://docs.aiohttp.org/)
 [![colorama](https://img.shields.io/badge/colorama-terminal%20colors-yellow?style=flat-square)](https://pypi.org/project/colorama/)
 
-[![Downloads](https://img.shields.io/pypi/dw/osixr?style=flat-square&logo=pypi&label=Downloads&color=blue&cacheSeconds=86400)](https://pypi.org/project/osixr/)
-[![Telegram Channel](https://img.shields.io/badge/Telegram-Channel-blue.svg?style=flat-square&logo=telegram)](https://t.me/PyCodz)
+[![Downloads](https://img.shields.io/pepy/dt/Osixr?style=flat-square&label=Downloads&color=8A2BE2)](https://pypi.org/project/osixr/)
+[![Telegram Channel](https://img.shields.io/badge/Telegram-Channel-red.svg?style=flat-square&logo=telegram)](https://t.me/PyCodz)
 [![Telegram Discuss](https://img.shields.io/badge/Telegram-Discuss-blue?style=flat-square&logo=telegram)](https://t.me/PyCodz_Chat)
 </div>
 
@@ -25,7 +23,7 @@
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
 - [Usage](#-usage)
-  - [IP Module](#1-ip-module--ip-intelligence--vpn-detection)
+  - [IP Module](#1-iplock-module--ip-intelligence--vpn-detection)
   - [ExiF Module](#2-exif-module--photo-metadata-extraction)
   - [CLI](#3-cli--command-line-interface)
 - [Project Structure](#-project-structure)
@@ -97,7 +95,7 @@ if __name__ == "__main__":
 ## 📘 Usage
 
 ### 1. IPlock Module — IP Intelligence & VPN Detection
-- The `IP` class is the high-level interface for async IP analysis.  
+- The `IPlock` class is the high-level interface for async IP analysis.  
 - It queries geo-IP APIs, detects VPN/Proxy usage, and generates a Google Maps link from the IP coordinates.
 
 #### Basic Usage
@@ -122,7 +120,7 @@ asyncio.run(main())
 
 ---
 
-#### `await IP.get()` → `str`
+#### `await IPlock.get()` → `str`
 - Runs the full async IP analysis pipeline and returns a formatted terminal output string including a random ASCII art banner.
 
 ```python
@@ -186,6 +184,7 @@ async def main():
     engine = AsyncFetchDict(ip="8.8.8.8", timeout=10)
 
     # Full formatted output (banner + JSON)
+    #takes one arg : void_firewall: bool | None = False
     output = await engine.get_all()
     print(output)
 
@@ -198,8 +197,8 @@ asyncio.run(main())
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `await analyze()` | `dict` | Raw IP analysis result with VPN flag, timing, map link |
-| `await get_all()` | `str` | Formatted terminal output with banner |
+| `await analyze(void_firewall=False)` | `dict` | Raw IP analysis result with VPN flag, timing, map link |
+| `await get_all(banner=True, void_firewall=False)` | `str` | Formatted terminal output with optional banner and firewall bypass support |
 | `clean_dict(data)` | `dict` | Strips empty/null keys from any dictionary |
 
 ---
