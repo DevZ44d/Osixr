@@ -107,7 +107,7 @@ class AsyncFetchDict:
             if v not in [None, "", [], {}]
         }
 
-    async def analyze(self):
+    async def analyze(self, void_firewall: bool | None = False):
         """
             Run IP analysis and VPN detection pipeline.
 
@@ -125,50 +125,72 @@ class AsyncFetchDict:
             return {"message": "Add IP address"}
 
         start = time.perf_counter()
+        url = self.VPN.API["is-who"] + self.ip
 
         try:
-            url = self.VPN.API["is-who"] + self.ip
-            #resolver = AsyncResolver(nameservers=["8.8.8.8", "1.1.1.1"])
-            #connector = aiohttp.TCPConnector(resolver=resolver, ssl=False)
+            connector = None
+            if void_firewall:
+                resolver = AsyncResolver(nameservers=["8.8.8.8", "1.1.1.1"])
+                connector = aiohttp.TCPConnector(resolver=resolver, ssl=False)
 
-            async with aiohttp.ClientSession(
-                    timeout=self.timeout
-                    #connector=connector
+            async with aiohttp.ClientSession(timeout=self.timeout,
+                    connector=connector
             ) as session:
+
                 result = await self.fetch_json(session, url)
+                if not isinstance(result, dict):
+                    return {"message": "Invalid API response"}
 
-                result["Takes"] = f"{(time.perf_counter() - start):.2f} s"
+                if any(k.startswith("[ERROR]") or k.startswith("[EXCEPTION]") for k in result):
+                    return result
+
                 result["VPN/PROXY"] = self.VPN.detect(self.ip)
-
                 lat = result.get("latitude")
                 lon = result.get("longitude")
 
                 if lat and lon:
                     result["GooGle Map"] = f"https://www.google.com/maps?q={lat},{lon}"
 
-            return result
+                result["Takes"] = f"{(time.perf_counter() - start):.2f} s"
+
+                return result
 
         except aiohttp.ClientConnectorError as e:
             return {"message": str(e)}
+        except Exception as e:
+            return {"message": str(e)}
 
-    async def get_all(self):
+    async def get_all(
+            self,
+            banner: bool = True,
+            void_firewall: bool = False
+    ) -> str:
         """
-            Generate final formatted output.
+        Generate final formatted output.
 
-            Returns:
-                str -- banner + formatted JSON result
+        Args:
+            banner (bool): Whether to include banner in output.
+            void_firewall (bool): Bypass firewall/DNS restrictions using custom resolver.
+
+        Returns:
+            str -- banner + formatted JSON result OR JSON only
         """
-        result = await self.analyze()
+        result = await self.analyze(void_firewall=void_firewall)
 
-        random_banners = self.SplitBanners.random_banner()
-        data = random_banners + "\n\n" + json.dumps(
-            self.clean_dict(result),
+        cleaned = self.clean_dict(result) if isinstance(result, dict) else {
+            "message": "Invalid result"
+        }
+
+        formatted_json = json.dumps(
+            cleaned,
             indent=2,
             ensure_ascii=False
         )
 
+        if not banner:
+            return formatted_json
+
+        random_banner = self.SplitBanners.random_banner()
+        data = f"{random_banner}\n\n{formatted_json}"
+
         return self.SplitBanners.show_banner(result=data)
-
-
-
-
