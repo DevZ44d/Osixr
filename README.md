@@ -104,8 +104,8 @@ import asyncio
 from osixr import IPlock
 
 async def main():
-    scanner = IPlock("8.8.8.8")
-    result = await scanner.get()
+    scanner = IPlock(ip="8.8.8.8", timeout=8)
+    result = await scanner.get(banner=False, void_firewall=False)
     print(result)
 
 asyncio.run(main())
