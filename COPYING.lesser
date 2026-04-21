@@ -1,0 +1,46 @@
+Osixr — Lesser / Additional Permissions Notice
+===============================================
+
+Copyright (c) 2026 AhMed (DevZ44d)
+
+This file supplements the main COPYING file and clarifies additional
+permissions granted to users of Osixr beyond the base MIT License.
+
+-------------------------------------------------------------------------------
+
+Additional Permissions
+----------------------
+
+1. LIBRARY USE
+   You may use Osixr as a library in your own projects — open-source or
+   commercial — without any requirement to open-source your own code.
+   The MIT License already grants this; this notice makes it explicit.
+
+2. MODIFICATION & DISTRIBUTION
+   You may modify and redistribute Osixr, provided that:
+     a) The original copyright notice (see COPYING) is retained in all copies.
+     b) This COPYING.lesser file is included alongside any redistribution.
+     c) Modified versions are clearly marked as such and not misrepresented
+        as the original Osixr software.
+
+3. COMMERCIAL USE
+   Commercial use, including integration into paid products or services, is
+   permitted without royalty or fee, subject to the MIT License terms.
+
+4. NO ENDORSEMENT
+   You may not use the name "Osixr", "AhMed", or "DevZ44d" to endorse or
+   promote products derived from this software without prior written
+   permission from the original author.
+
+-------------------------------------------------------------------------------
+
+Disclaimer
+----------
+
+This software is provided for lawful, ethical use only.
+The author assumes no liability for misuse of this tool.
+Users are solely responsible for ensuring their use complies with
+applicable laws and the terms of service of any third-party APIs queried.
+
+For the full license text see: COPYING
+For dependency licenses see the Third-Party Notices section in: COPYING
