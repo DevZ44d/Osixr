@@ -1,0 +1,38 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  MANIFEST.in — controls which files are included in the sdist (source dist)
+#  when running: python -m build  /  python setup.py sdist
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── always include ────────────────────────────────────────────────────────────
+include README.md
+include LICENSE
+include COPYING
+include COPYING.lesser
+include NOTICE
+include pyproject.toml
+include Makefile
+include Dockerfile
+include docker-compose.yml
+include .dockerignore
+
+# ── source tree ───────────────────────────────────────────────────────────────
+recursive-include src *.py
+recursive-include src *.pyi
+
+# ── .github (workflows, templates) ───────────────────────────────────────────
+recursive-include .github *.yml
+recursive-include .github *.yaml
+recursive-include .github *.md
+
+# ── tests ─────────────────────────────────────────────────────────────────────
+recursive-include tests *.py
+
+# ── always exclude ────────────────────────────────────────────────────────────
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__
+global-exclude *.egg-info
+global-exclude .DS_Store
+global-exclude Thumbs.db
+prune dist
+prune build
