@@ -1,0 +1,48 @@
+Osixr — NOTICE File
+===================
+
+Project   : Osixr
+Version   : 1.0.0
+Author    : AhMed (DevZ44d)
+License   : MIT
+Repository: https://github.com/DevZ44d/Osixr
+PyPI      : https://pypi.org/project/osixr/
+Telegram  : https://t.me/PyCodz
+
+-------------------------------------------------------------------------------
+
+This product includes software developed by AhMed (DevZ44d).
+
+Copyright (c) 2026 AhMed (DevZ44d). All rights reserved.
+
+This software is licensed under the MIT License.
+See the LICENSE and COPYING files in the root of this distribution for the
+full license text and third-party notices.
+
+-------------------------------------------------------------------------------
+
+Changelog (high-level)
+----------------------
+
+1.0.0 — 2026-04-16
+  • Initial public release.
+  • IP intelligence engine (AsyncFetchDict, IPlock).
+  • VPN / Proxy detection (FirewallSafeVPNDetector).
+  • EXIF metadata extraction (Exif, jpeg_reader, tiff_parser).
+  • Animated ASCII banner system (BannerSplitLines).
+  • Full CLI with subcommands: ip, batch, vpn, exif.
+  • Global flags: -v (version), -c (check update), -o (help).
+  • Dockerfile + docker-compose.yml.
+  • Published to PyPI.
+
+-------------------------------------------------------------------------------
+
+Attribution
+-----------
+
+The public IP geo-lookup API used by this software is provided by ipwho.is.
+No affiliation with ipwho.is is implied or claimed.
+
+The VPN/Proxy detection heuristics draw on publicly available IP reputation
+data from ip-api.com, ipinfo.io, and geojs.io at runtime.
+No data from these services is bundled in this repository.
