@@ -74,7 +74,7 @@ from osixr import IPlock, ExiF
 async def run():
     scanner = IPlock(ip="8.8.8.8", timeout=8) 
     # Get clean JSON output (without banner: False)
-    result = await scanner.get(banner=False) # default is True .
+    result = await scanner.get(banner=False, void_firewall=False)
     print(result)
 
 asyncio.run(run())
@@ -325,14 +325,10 @@ print(data["camera_info"])
 ### 3. CLI — Command-Line Interface
 - **osixr** ships with a full CLI so you can run every feature directly from the terminal — no Python code needed.
 - Supports both `osixr` (after install) and `python -m osixr` (from source).
-#### Installation check
-```bash
-$ osixr --help
-```
 
 #### Installation check
 ```bash
-$ osixr --help
+$ osixr -c
 ```
  
 ---
