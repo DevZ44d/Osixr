@@ -1,6 +1,7 @@
 import time
 import json
 import asyncio
+import urllib.request
 from typing import Dict, Optional
 
 import aiohttp
@@ -11,31 +12,67 @@ from ..Banners.utils import BannerSplitLines, Color
 from .progress import MaigretStyleProgress
 
 
+def resolve_my_ip(timeout: int = 5) -> str:
+    """
+        Resolve the caller's public IP address.
+
+        Tries multiple lightweight APIs in order — returns the first
+        successful response. Falls back to '0.0.0.0' if all fail.
+
+        Used when ip='me' is passed to IPlock / AsyncFetchDict.
+
+        Args:
+            timeout -- per-request timeout in seconds (default: 5)
+
+        Returns:
+            str -- public IPv4 address  e.g. '196.219.54.141'
+    """
+    apis = [
+        "https://api.ipify.org",
+        "https://ipinfo.io/ip",
+        "https://checkip.amazonaws.com",
+        "https://api4.my-ip.io/ip",
+        "https://ipecho.net/plain",
+    ]
+
+    for url in apis:
+        try:
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "Mozilla/5.0 (compatible; osixr/1.0)"},
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as res:
+                ip = res.read().decode("utf-8", errors="ignore").strip()
+                if ip:
+                    return ip
+        except Exception:
+            continue
+
+    return "0.0.0.0"
+
+
 class AsyncFetchDict:
     """
-    Async IP Intelligence & VPN Detection Engine.
+        Async IP Intelligence & VPN Detection Engine.
 
-    Full pipeline when analyze() / get_all() is called:
+        Special value ip='me' → automatically resolves to the caller's
+        public IP before running the analysis pipeline.
 
-        1. Print the random ASCII art banner (animated, line-by-line)
-        2. Start the Searching bar (MaigretStyleProgress) as a background Task
-        3. Advance bar to ~10 %  →  send geo-IP request (aiohttp)
-        4. Advance bar to ~40 %  →  geo response received
-        5. Advance bar per VPN endpoint  →  3 endpoints → ~55 / 70 / 85 %
-        6. Advance bar to ~100 % →  mark done, bar fills and erases itself
-        7. Return enriched result dict  →  caller prints the data
+        Full pipeline when analyze() / get_all() is called:
+            1. Resolve 'me' → public IP  (if needed)
+            2. Print animated banner  (bright red)
+            3. Start Searching bar
+            4. Fetch geo-IP data  (aiohttp)
+            5. Run VPN detection  (3 endpoints, each advances bar)
+            6. Bar fills to 100% and erases itself
+            7. Return enriched result dict
 
-    ─────────────────────────────────────────────────────────────────────────
-    Arguments:
-        ip      -- Target IP address (str or None)
-        timeout -- Request timeout in seconds (default: 10)
-
-    Methods:
-        analyze(void_firewall, progress)  -> dict
-        get_all(banner, void_firewall)    -> str
-        clean_dict(data)                  -> dict
-    ─────────────────────────────────────────────────────────────────────────
+        Arguments:
+            ip      -- Target IP address, or 'me' for your public IP
+            timeout -- Request timeout in seconds (default: 10)
     """
+
+    _BAR_TOTAL = 100
 
     def __init__(self, ip: Optional[str] = None, timeout: int = 10) -> None:
         self.ip           = ip
@@ -44,13 +81,18 @@ class AsyncFetchDict:
         self.SplitBanners = BannerSplitLines()
         self.color        = Color()
 
-    # ── low-level fetch ───────────────────────────────────────────────────────
+    def _resolve_ip(self) -> Optional[str]:
+        """
+            Return the real IP to query.
+
+            If self.ip == 'me' (case-insensitive), resolve and return
+            the caller's public IP. Otherwise return self.ip unchanged.
+        """
+        if self.ip and self.ip.strip().lower() == "me":
+            return resolve_my_ip()
+        return self.ip
 
     async def fetch_json(self, session: aiohttp.ClientSession, url: str) -> Dict:
-        """
-        Async HTTP GET → parsed JSON dict.
-        Returns error dict on non-200 status or any exception.
-        """
         try:
             async with session.get(
                 url,
@@ -68,16 +110,11 @@ class AsyncFetchDict:
         except Exception as e:
             return {"[EXCEPTION]": str(e)}
 
-    # ── utility ───────────────────────────────────────────────────────────────
-
     def clean_dict(self, data: Optional[Dict]) -> Dict:
-        """Strip None / empty-string / empty-list / empty-dict values."""
         return {
             k: v for k, v in (data or {}).items()
             if v not in (None, "", [], {})
         }
-
-    # ── main pipeline ─────────────────────────────────────────────────────────
 
     async def analyze(
         self,
@@ -85,28 +122,24 @@ class AsyncFetchDict:
         progress: Optional[MaigretStyleProgress] = None,
     ) -> Dict:
         """
-        Run full IP analysis with milestone-driven progress updates.
+            Run full IP analysis pipeline.
 
-        Milestones:
-            ~10 %  — request about to be sent
-            ~40 %  — geo-IP response received
-            ~55 %  — VPN endpoint 1 done
-            ~70 %  — VPN endpoint 2 done
-            ~85 %  — VPN endpoint 3 done + score computed
-            ~100 % — all done
+            Resolves 'me' → public IP before querying.
 
-        Args:
-            void_firewall -- bypass DNS via Google / Cloudflare resolver
-            progress      -- MaigretStyleProgress instance (optional)
+            Args:
+                void_firewall -- bypass DNS via Google/Cloudflare resolver
+                progress      -- MaigretStyleProgress instance (optional)
 
-        Returns:
-            dict -- enriched result
+            Returns:
+                dict -- enriched result
         """
-        if not self.ip:
-            return {"message": "Add IP address"}
+        target_ip = self._resolve_ip()
+
+        if not target_ip or target_ip == "0.0.0.0":
+            return {"message": "Could not resolve public IP" if self.ip == "me" else "No IP address provided"}
 
         start = time.perf_counter()
-        url   = self.VPN.API["is-who"] + self.ip
+        url   = self.VPN.API["is-who"] + target_ip
 
         try:
             connector = None
@@ -119,13 +152,11 @@ class AsyncFetchDict:
                 connector = connector,
             ) as session:
 
-                # Milestone 1: request sent
                 if progress:
                     progress.set_random_progress(10, 4)
 
                 result = await self.fetch_json(session, url)
 
-                # Milestone 2: geo response received
                 if progress:
                     progress.set_random_progress(40, 5)
 
@@ -135,22 +166,18 @@ class AsyncFetchDict:
             if any(k.startswith("[ERROR]") or k.startswith("[EXCEPTION]") for k in result):
                 return result
 
-            # VPN detection — 3 endpoints, each advances the bar
-            # Progress callback: called once per API endpoint inside gather_data
             _milestones = iter([55, 70, 85])
 
-            def _vpn_progress_cb():
+            def _vpn_cb():
                 if progress:
-                    target = next(_milestones, 85)
-                    progress.set_random_progress(target, 4)
+                    progress.set_random_progress(next(_milestones, 85), 4)
 
             result["VPN/PROXY"] = await asyncio.to_thread(
                 self.VPN.detect,
-                self.ip,
-                _vpn_progress_cb,
+                target_ip,
+                _vpn_cb,
             )
 
-            # Enrich result
             lat = result.get("latitude")
             lon = result.get("longitude")
             if lat and lon:
@@ -158,7 +185,6 @@ class AsyncFetchDict:
 
             result["Takes"] = f"{(time.perf_counter() - start):.2f} s"
 
-            # Milestone final: all done
             if progress:
                 progress.set_random_progress(100, 1)
 
@@ -169,36 +195,20 @@ class AsyncFetchDict:
         except Exception as e:
             return {"message": f"Unexpected error: {e}"}
 
-    # ── formatted output ──────────────────────────────────────────────────────
-
     async def get_all(
         self,
         banner:        bool = True,
         void_firewall: bool = False,
     ) -> str:
-        """
-        Full pipeline:
-            1. Print animated banner (once, line-by-line)
-            2. Start Searching bar
-            3. Run analyze() with milestone progress updates
-            4. Bar fills to 100 % and erases itself
-            5. Return formatted JSON string
-
-        Args:
-            banner        -- show ASCII art banner before the bar (default True)
-            void_firewall -- bypass firewall/DNS via custom resolver
-
-        Returns:
-            str -- formatted JSON string (NOT printed here — caller decides)
-        """
         if banner:
-            banner_text = self.SplitBanners.random_banner()
+            from ..Banners.banners import banner as BANNERS
+            import random
+            ran         = random.randint(0, len(BANNERS) - 1)
+            banner_text = f"\033[91m{BANNERS[ran]}\033[0m"
             self.SplitBanners.show_banner(result=banner_text)
 
-
-        progress      = MaigretStyleProgress(total=100)
+        progress      = MaigretStyleProgress(total=self._BAR_TOTAL)
         progress_task = asyncio.create_task(progress.start_render())
-
 
         result = await self.analyze(
             void_firewall = void_firewall,
@@ -207,7 +217,6 @@ class AsyncFetchDict:
 
         progress.done = True
         await progress_task
-
 
         cleaned = (
             self.clean_dict(result)
