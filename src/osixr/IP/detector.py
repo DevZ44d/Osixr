@@ -97,7 +97,7 @@ class FirewallSafeVPNDetector:
         except Exception:
             return {}
 
-    def gather_data(self, ip: str) -> List[Dict[str, Any]]:
+    def gather_data(self, ip: str, progress_callback=None) -> List[Dict[str, Any]]:
         """
             Collect IP intelligence from multiple public APIs.
 
@@ -108,7 +108,6 @@ class FirewallSafeVPNDetector:
                 List[dict]: List of API responses
         """
         results: List[Dict[str, Any]] = []
-
         self.endpoints = [
             f"http://ip-api.com/json/{ip}",
             f"https://ipinfo.io/{ip}/json",
@@ -116,8 +115,11 @@ class FirewallSafeVPNDetector:
         ]
 
         for url in self.endpoints:
-            for _ in range(2):  # retry mechanism
+            for _ in range(1):  # retry
                 data = self.fetch(url)
+
+                if progress_callback:
+                    progress_callback()
 
                 if data:
                     results.append(data)
@@ -127,7 +129,7 @@ class FirewallSafeVPNDetector:
 
         return results
 
-    def detect(self, ip: str) -> bool:
+    def detect(self, ip: str, progress_callback = None) -> bool:
         """
             Determine if an IP is VPN / Proxy / Hosting.
 
@@ -137,10 +139,10 @@ class FirewallSafeVPNDetector:
             Returns:
                 bool: True if suspicious, False if clean
         """
-        results = self.gather_data(ip)
+        results = self.gather_data(ip, progress_callback)
 
-        isps: List[Optional[str]] = []
-        proxy_flags: List[Any] = []
+        isps = []
+        proxy_flags = []
 
         for r in results:
             isps.append(
