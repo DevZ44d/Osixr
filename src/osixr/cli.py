@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 from .forward import help_m, check_for_update, versions
 
-
 try:
     from colorama import init as _colorama_init
     _colorama_init(autoreset=True)
@@ -22,7 +21,7 @@ RESET  = "\033[0m"
 
 
 def banner_line(char="─", width=60) -> str:
-    return DIM + char * width + RESET
+    return RED + char * width + RESET
 
 
 def section(title: str, emoji: str = "") -> str:
@@ -36,29 +35,44 @@ def kv(key: str, val, key_width: int = 28) -> str:
 
 def _print_banner() -> None:
     try:
+        from .Banners.banners import banner as BANNERS
         from .Banners.utils import BannerSplitLines
-        print(BannerSplitLines().random_banner())
+        import random
+        sp      = BannerSplitLines()
+        ran     = random.randint(0, len(BANNERS) - 1)
+        colored = f"{RED}{BANNERS[ran]}{RESET}"
+        sp.show_banner(colored)
     except Exception:
         pass
 
 
-async def _run_ip(ip: str, timeout: int, output_json: bool, silent: bool, save: str | None):
+async def _run_ip(
+    ip:            str,
+    timeout:       int,
+    output_json:   bool,
+    silent:        bool,
+    save:          str | None,
+    void_firewall: bool,
+) -> None:
     from .main import IPlock
 
-    engine = IPlock(ip=ip, timeout=timeout)
-
-    if not silent:
-        _print_banner()
-
-    result = await engine.analyze()
-    clean  = engine.clean_dict(result)
+    engine   = IPlock(ip=ip, timeout=timeout)
+    json_str = await engine.get(
+        banner        = not silent,
+        void_firewall = void_firewall,
+    )
 
     if output_json:
-        out = json.dumps(clean, indent=2, ensure_ascii=False)
-        print(out)
+        print(json_str)
         if save:
-            Path(save).write_text(out, encoding="utf-8")
+            Path(save).write_text(json_str, encoding="utf-8")
             print(f"\n{GREEN}✔  Saved → {save}{RESET}")
+        return
+
+    try:
+        clean = json.loads(json_str)
+    except json.JSONDecodeError:
+        print(json_str)
         return
 
     print(section("IP INTELLIGENCE REPORT", "🌐"))
@@ -90,24 +104,31 @@ async def _run_ip(ip: str, timeout: int, output_json: bool, silent: bool, save: 
         print()
 
     if save:
-        Path(save).write_text(
-            json.dumps(clean, indent=2, ensure_ascii=False), encoding="utf-8"
-        )
+        Path(save).write_text(json_str, encoding="utf-8")
         print(f"{GREEN}✔  Saved → {save}{RESET}")
 
     print(banner_line())
 
 
-async def _run_batch(ips: list[str], timeout: int, save: str | None):
+async def _run_batch(
+    ips:           list[str],
+    timeout:       int,
+    save:          str | None,
+    void_firewall: bool,
+) -> None:
     from .main import IPlock
 
     print(section("BATCH IP SCAN", "🔁"))
     print(f"  {DIM}Scanning {len(ips)} IPs concurrently …{RESET}\n")
 
     async def scan_one(ip: str):
-        engine = IPlock(ip=ip.strip(), timeout=timeout)
-        result = await engine.analyze()
-        return ip.strip(), engine.clean_dict(result)
+        engine   = IPlock(ip=ip.strip(), timeout=timeout)
+        json_str = await engine.get(banner=False, void_firewall=void_firewall)
+        try:
+            data = json.loads(json_str)
+        except json.JSONDecodeError:
+            data = {"error": json_str}
+        return ip.strip(), data
 
     results  = await asyncio.gather(*[scan_one(ip) for ip in ips])
     all_data: dict = {}
@@ -148,7 +169,6 @@ def _run_vpn(ip: str) -> None:
     print(banner_line())
 
 
-
 SECTION_ALIASES = {
     "file":       "file_info",
     "camera":     "camera_info",
@@ -172,8 +192,13 @@ SECTION_META = {
 }
 
 
-def _run_exif(filepath: str, output_json: bool, silent: bool,
-              section_filter: str | None, save: str | None) -> None:
+def _run_exif(
+    filepath:       str,
+    output_json:    bool,
+    silent:         bool,
+    section_filter: str | None,
+    save:           str | None,
+) -> None:
     from .Exif.core.photo_info import Exif
 
     if not Path(filepath).exists():
@@ -248,13 +273,17 @@ def build_parser() -> argparse.ArgumentParser:
 
   {GREEN}# IP lookup{RESET}
   osixr ip 8.8.8.8
+  osixr ip me
+  osixr ip me --json
   osixr ip 8.8.8.8 --json
   osixr ip 8.8.8.8 --save result.json
   osixr ip 8.8.8.8 --silent --timeout 5
+  osixr ip 8.8.8.8 --void-firewall
 
   {GREEN}# Batch IP scan{RESET}
   osixr batch 8.8.8.8 1.1.1.1 196.219.54.141
   osixr batch 8.8.8.8 1.1.1.1 --save batch.json
+  osixr batch 8.8.8.8 1.1.1.1 --void-firewall
 
   {GREEN}# VPN/Proxy quick check{RESET}
   osixr vpn 192.168.1.1
@@ -272,63 +301,45 @@ def build_parser() -> argparse.ArgumentParser:
 """,
     )
 
-
-    parser.add_argument(
-        "-v", "--version",
-        action="store_true",
-        help="Show osixr version and project info",
-    )
-    parser.add_argument(
-        "-c", "--check",
-        action="store_true",
-        help="Check PyPI for a newer release",
-    )
-    parser.add_argument(
-        "-o", "--osixr",
-        action="store_true",
-        help="Show full osixr help & usage guide",
-    )
-    # Manual help flag (replaces the disabled built-in -h)
-    parser.add_argument(
-        "-h", "--help",
-        action="store_true",
-        help="Show this help message",
-    )
+    parser.add_argument("-v", "--version", action="store_true",
+                        help="Show osixr version and project info")
+    parser.add_argument("-c", "--check",   action="store_true",
+                        help="Check PyPI for a newer release")
+    parser.add_argument("-o", "--osixr",   action="store_true",
+                        help="Show full osixr help & usage guide")
+    parser.add_argument("-h", "--help",    action="store_true",
+                        help="Show this help message")
 
     sub = parser.add_subparsers(dest="command", metavar="command")
 
-    # ip
     p_ip = sub.add_parser("ip", help="Full IP geo-lookup + VPN detection")
-    p_ip.add_argument("ip",           help="Target IP address")
-    p_ip.add_argument("--timeout",    type=int, default=10, metavar="SEC",
+    p_ip.add_argument("ip",              help="Target IP address")
+    p_ip.add_argument("--timeout",       type=int, default=10, metavar="SEC",
                       help="Request timeout in seconds (default: 10)")
-    p_ip.add_argument("--json",       action="store_true", help="Output raw JSON")
-    p_ip.add_argument("--silent",     action="store_true", help="Skip ASCII banner")
-    p_ip.add_argument("--save",       metavar="FILE",      help="Save output to JSON file")
+    p_ip.add_argument("--json",          action="store_true", help="Output raw JSON")
+    p_ip.add_argument("--silent",        action="store_true", help="Skip ASCII banner and Searching bar")
+    p_ip.add_argument("--save",          metavar="FILE",      help="Save output to JSON file")
+    p_ip.add_argument("--void-firewall", action="store_true", help="Bypass DNS restrictions via Google/Cloudflare resolver")
 
-    # batch
     p_batch = sub.add_parser("batch", help="Scan multiple IPs concurrently")
-    p_batch.add_argument("ips",       nargs="+", help="IP addresses to scan")
-    p_batch.add_argument("--timeout", type=int, default=10, metavar="SEC",
+    p_batch.add_argument("ips",            nargs="+", help="IP addresses to scan")
+    p_batch.add_argument("--timeout",      type=int, default=10, metavar="SEC",
                          help="Request timeout in seconds (default: 10)")
-    p_batch.add_argument("--save",    metavar="FILE", help="Save results to JSON file")
+    p_batch.add_argument("--save",         metavar="FILE", help="Save results to JSON file")
+    p_batch.add_argument("--void-firewall", action="store_true", help="Bypass DNS restrictions via Google/Cloudflare resolver")
 
-    # vpn
     p_vpn = sub.add_parser("vpn", help="Quick VPN/Proxy detection only")
     p_vpn.add_argument("ip", help="Target IP address")
 
-    # exif
     p_exif = sub.add_parser("exif", help="Extract EXIF metadata from image")
-    p_exif.add_argument("file",       help="Path to JPEG or TIFF image")
-    p_exif.add_argument("--section",  metavar="NAME",
-                        help="Show one section only: "
-                             "file | camera | image | capture | datetime | gps | lens | processing")
-    p_exif.add_argument("--json",     action="store_true", help="Output raw JSON")
-    p_exif.add_argument("--silent",   action="store_true", help="Skip ASCII banner")
-    p_exif.add_argument("--save",     metavar="FILE",      help="Save metadata to JSON file")
+    p_exif.add_argument("file",          help="Path to JPEG or TIFF image")
+    p_exif.add_argument("--section",     metavar="NAME",
+                        help="Show one section only: file | camera | image | capture | datetime | gps | lens | processing")
+    p_exif.add_argument("--json",        action="store_true", help="Output raw JSON")
+    p_exif.add_argument("--silent",      action="store_true", help="Skip ASCII banner")
+    p_exif.add_argument("--save",        metavar="FILE",      help="Save metadata to JSON file")
 
     return parser
-
 
 
 def main() -> None:
@@ -351,25 +362,26 @@ def main() -> None:
         parser.print_help()
         sys.exit(0)
 
-
     if not args.command:
         parser.print_help()
         sys.exit(0)
 
     if args.command == "ip":
         asyncio.run(_run_ip(
-            ip=args.ip,
-            timeout=args.timeout,
-            output_json=args.json,
-            silent=args.silent,
-            save=args.save,
+            ip            = args.ip,
+            timeout       = args.timeout,
+            output_json   = args.json,
+            silent        = args.silent,
+            save          = args.save,
+            void_firewall = args.void_firewall,
         ))
 
     elif args.command == "batch":
         asyncio.run(_run_batch(
-            ips=args.ips,
-            timeout=args.timeout,
-            save=args.save,
+            ips           = args.ips,
+            timeout       = args.timeout,
+            save          = args.save,
+            void_firewall = args.void_firewall,
         ))
 
     elif args.command == "vpn":
@@ -377,11 +389,11 @@ def main() -> None:
 
     elif args.command == "exif":
         _run_exif(
-            filepath=args.file,
-            output_json=args.json,
-            silent=args.silent,
-            section_filter=args.section,
-            save=args.save,
+            filepath       = args.file,
+            output_json    = args.json,
+            silent         = args.silent,
+            section_filter = args.section,
+            save           = args.save,
         )
 
 
