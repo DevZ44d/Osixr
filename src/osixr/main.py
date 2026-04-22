@@ -19,32 +19,30 @@ class IPlock(AsyncFetchDict):
     """
 
     def __init__(self, ip: str | None, timeout: int = 10) -> None:
-        super().__init__(ip, timeout)   # handles ip, timeout, VPN, banners
+        super().__init__(ip, timeout)   # sets ip, timeout (ClientTimeout), VPN, banners
         self.color = Color()
-        self.banner = BannerSplitLines()
 
-    async def get(self, banner: bool = True, void_firewall: bool = False):
-        banner_text = self.banner.random_banner()
+    async def get(self, banner: bool = True, void_firewall: bool = False) -> str:
+        """
+            Full pipeline:
+                banner (animated, once)  →  Searching bar  →  bar erases  →  JSON
+
+            get_all() handles everything internally:
+                - prints the banner itself (if banner=True)
+                - runs the progress bar
+                - returns the formatted JSON string
+
+            Args:
+                banner        -- show ASCII art banner before the bar (default True)
+                void_firewall -- bypass DNS/firewall via custom resolver
+
+            Returns:
+                str -- formatted JSON result
+        """
         try:
-            result = await self.analyze(void_firewall=void_firewall)
-            formatted = json.dumps(
-                result,
-                indent=2,
-                ensure_ascii=False
-            )
-
-            if banner:
-                return f"{self.banner.show_banner(banner_text)}\n{formatted}"
-
-            return formatted
+            return await self.get_all(banner=banner, void_firewall=void_firewall)
         except Exception as e:
-            return json.dumps(
-                {"error": str(e)},
-                indent=2,
-                ensure_ascii=False
-            )
-
-
+            return json.dumps({"error": str(e)}, indent=2, ensure_ascii=False)
 
 
 class ExiF:
@@ -61,47 +59,43 @@ class ExiF:
         self.info   = Exif(img)
 
     def to_dict(self, banner: bool = True) -> str | Any:
-        """Print banner + JSON metadata to stdout."""
+        """
+            Return JSON metadata string, optionally with animated banner.
+
+            Args:
+                banner -- print animated banner before JSON (default True)
+
+            Returns:
+                str -- JSON metadata
+        """
+        data = json.dumps(self.info.to_dict(), indent=2, ensure_ascii=False)
 
         if banner:
-            output = self.banner + "\n\n" + json.dumps(
-                self.info.to_dict(), indent=2, ensure_ascii=False
-            )
-            t = self.obj.show_banner(output)
-            return t
-        else:
-            return json.dumps(
-                self.info.to_dict(), indent=2, ensure_ascii=False
-            )
+            output = self.banner + "\n\n" + data
+            return self.obj.show_banner(output)
 
+        return data
 
-    def print_all(self) -> None:
-        """Print banner + full formatted metadata report."""
+    def print_all(self) -> str:
+        """Print animated banner + full formatted metadata report."""
         report = self.banner + Color.RESET + "\n" + self.info.print_all()
-        u = self.obj.show_banner(report)
-        return u
+        return self.obj.show_banner(report)
 
 """
-    async def _demo():
-        scanner = IPlock(ip="8.8.8.8")
-        #result  = await scanner.get()
-        #all = await scanner.print_all()
-        #clean   = scanner.clean_dict(result)
-        #print(await scanner.silent_dict())
-        print(await scanner.get(banner=True))
+
+async def _demo():
+    scanner = IPlock(ip="8.8.8.8")
+    result  = await scanner.get(banner=True)
+    print(result)
+
+
+async def _demo_exif():
+    e = ExiF("MIN.jpg")
+    #print(e.print_all())
+    print(e.to_dict(banner=False))
     
-    async def demo():
-        e = ExiF("WIN.jpg")
-        print(e.print_all())
-        print((e.to_dict(banner=False)))
-    
-    
-    if __name__ == "__main__":
-        asyncio.run(_demo())
-        ##xxx()
-    
-    
-    #if __name__ == "__main__":
-        #xxx()
+if __name__ == "__main__":
+    asyncio.run(_demo_exif())
 """
+
 
