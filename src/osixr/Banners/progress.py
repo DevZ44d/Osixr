@@ -101,7 +101,7 @@ class MaigretStyleProgress:
 
     async def _render_rich(self) -> None:
         console = Console()
-        with Live(console=console, refresh_per_second=20) as live:
+        with Live(console=console, refresh_per_second=20, transient=True) as live:
             while not self.done:
                 self.smooth_tick()
                 live.update(Text(self._build_line()))
