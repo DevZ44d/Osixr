@@ -6,27 +6,15 @@ from typing import Dict, Optional
 
 import aiohttp
 from aiohttp.resolver import AsyncResolver
+from ..Banners.banners import banner as BANNERS
+import random
 
 from .detector import FirewallSafeVPNDetector
 from ..Banners.utils import BannerSplitLines, Color
-from .progress import MaigretStyleProgress
+from osixr.src.osixr.IP.progress import MaigretStyleProgress
 
 
 def resolve_my_ip(timeout: int = 5) -> str:
-    """
-        Resolve the caller's public IP address.
-
-        Tries multiple lightweight APIs in order — returns the first
-        successful response. Falls back to '0.0.0.0' if all fail.
-
-        Used when ip='me' is passed to IPlock / AsyncFetchDict.
-
-        Args:
-            timeout -- per-request timeout in seconds (default: 5)
-
-        Returns:
-            str -- public IPv4 address  e.g. '196.219.54.141'
-    """
     apis = [
         "https://api.ipify.org",
         "https://ipinfo.io/ip",
@@ -34,7 +22,6 @@ def resolve_my_ip(timeout: int = 5) -> str:
         "https://api4.my-ip.io/ip",
         "https://ipecho.net/plain",
     ]
-
     for url in apis:
         try:
             req = urllib.request.Request(
@@ -47,30 +34,10 @@ def resolve_my_ip(timeout: int = 5) -> str:
                     return ip
         except Exception:
             continue
-
     return "0.0.0.0"
 
 
 class AsyncFetchDict:
-    """
-        Async IP Intelligence & VPN Detection Engine.
-
-        Special value ip='me' → automatically resolves to the caller's
-        public IP before running the analysis pipeline.
-
-        Full pipeline when analyze() / get_all() is called:
-            1. Resolve 'me' → public IP  (if needed)
-            2. Print animated banner  (bright red)
-            3. Start Searching bar
-            4. Fetch geo-IP data  (aiohttp)
-            5. Run VPN detection  (3 endpoints, each advances bar)
-            6. Bar fills to 100% and erases itself
-            7. Return enriched result dict
-
-        Arguments:
-            ip      -- Target IP address, or 'me' for your public IP
-            timeout -- Request timeout in seconds (default: 10)
-    """
 
     _BAR_TOTAL = 100
 
@@ -82,12 +49,6 @@ class AsyncFetchDict:
         self.color        = Color()
 
     def _resolve_ip(self) -> Optional[str]:
-        """
-            Return the real IP to query.
-
-            If self.ip == 'me' (case-insensitive), resolve and return
-            the caller's public IP. Otherwise return self.ip unchanged.
-        """
         if self.ip and self.ip.strip().lower() == "me":
             return resolve_my_ip()
         return self.ip
@@ -121,18 +82,6 @@ class AsyncFetchDict:
         void_firewall: bool = False,
         progress: Optional[MaigretStyleProgress] = None,
     ) -> Dict:
-        """
-            Run full IP analysis pipeline.
-
-            Resolves 'me' → public IP before querying.
-
-            Args:
-                void_firewall -- bypass DNS via Google/Cloudflare resolver
-                progress      -- MaigretStyleProgress instance (optional)
-
-            Returns:
-                dict -- enriched result
-        """
         target_ip = self._resolve_ip()
 
         if not target_ip or target_ip == "0.0.0.0":
@@ -151,12 +100,9 @@ class AsyncFetchDict:
                 timeout   = self.timeout,
                 connector = connector,
             ) as session:
-
                 if progress:
                     progress.set_random_progress(10, 4)
-
                 result = await self.fetch_json(session, url)
-
                 if progress:
                     progress.set_random_progress(40, 5)
 
@@ -201,8 +147,6 @@ class AsyncFetchDict:
         void_firewall: bool = False,
     ) -> str:
         if banner:
-            from ..Banners.banners import banner as BANNERS
-            import random
             ran         = random.randint(0, len(BANNERS) - 1)
             banner_text = f"\033[91m{BANNERS[ran]}\033[0m"
             self.SplitBanners.show_banner(result=banner_text)

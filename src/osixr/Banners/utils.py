@@ -43,7 +43,7 @@ class BannerSplitLines:
         lines = []
 
         for line in result.splitlines():
-            print(line)           # ← was commented out, causing banner to never show
+            print(self.color.RED + line + self.color.RESET)          # ← was commented out, causing banner to never show
             time.sleep(0.05)
             lines.append(line)
 

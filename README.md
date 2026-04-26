@@ -12,6 +12,9 @@
 [![Downloads](https://img.shields.io/pepy/dt/Osixr?style=flat-square&label=Downloads&color=8A2BE2)](https://pypi.org/project/osixr/)
 [![Telegram Channel](https://img.shields.io/badge/Telegram-Channel-red.svg?style=flat-square&logo=telegram)](https://t.me/PyCodz)
 [![Telegram Discuss](https://img.shields.io/badge/Telegram-Discuss-blue?style=flat-square&logo=telegram)](https://t.me/PyCodz_Chat)
+
+[![Package Version](https://img.shields.io/pypi/v/osixr?style=flat-square&color=blue&logo=pypi&logoColor=blue)](https://pypi.org/project/Osixr/)
+[![Wheel](https://img.shields.io/pypi/wheel/osixr?style=flat-square)](https://pypi.org/project/osixr)
 </div>
 
 ---
@@ -33,10 +36,10 @@
 ## 🔍 Overview
 - **Osixr** is a modular Python library designed for OSINT information gathering. It ships with two powerful engines:
 
-| Engine | Description |
-|--------|-------------|
-| 🌐 **IP** | Async IP geo-lookup, VPN/Proxy detection, and Google Maps link generation |
-| 📷 **ExiF** | Deep EXIF metadata extraction from JPEG/TIFF images — camera, GPS, lens, capture settings |
+| Engine   | Description |
+|----------|-------------|
+| **IP**   | Async IP geo-lookup, VPN/Proxy detection, and Google Maps link generation |
+| **ExiF** | Deep EXIF metadata extraction from JPEG/TIFF images — camera, GPS, lens, capture settings |
 
 - Both modules output styled, animated terminal reports using random ASCII art banners.
 
@@ -55,12 +58,16 @@ osixr/
 ## ⚙️ Installation
 - Via PyPi:
 ```bash
-$ python -m pip install --upgrade osixr
+# Windows
+$ pip install --upgrade osixr
+
+# Linux
+$ pipx install --upgrade osixr
 ```
 
 - Via Git:
 ```bash
-$ python -m pip install git+https://github.com/DevZ44d/Osixr.git
+$ pip install git+https://github.com/DevZ44d/Osixr.git
 ```
 
 ---
@@ -72,6 +79,7 @@ from osixr import IPlock, ExiF
 
 # IP Intelligence
 async def run():
+    #replace "8.8.8.8" to "me" to get your ip and scanning it
     scanner = IPlock(ip="8.8.8.8", timeout=8) 
     # Get clean JSON output (without banner: False)
     result = await scanner.get(banner=False, void_firewall=False)
@@ -104,6 +112,7 @@ import asyncio
 from osixr import IPlock
 
 async def main():
+    #replace "8.8.8.8" to "me" to get your ip and scanning it
     scanner = IPlock(ip="8.8.8.8", timeout=8)
     result = await scanner.get(banner=False, void_firewall=False)
     print(result)
@@ -373,6 +382,7 @@ osixr ip <IP> [--timeout SEC] [--json] [--silent] [--save FILE]
  
 ```bash
 # Styled terminal report
+#replace "8.8.8.8" to "me" to get your ip and scanning it .
 osixr ip 8.8.8.8
  
 # Raw JSON output

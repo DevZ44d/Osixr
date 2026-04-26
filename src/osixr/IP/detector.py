@@ -2,8 +2,18 @@ import json
 import urllib.request
 import urllib.error
 import socket
-import time
+import time, os
 from typing import Dict, List, Any, Optional
+
+def is_android_terminal() -> bool:
+    return (
+        "ANDROID_ROOT" in os.environ
+        or "ANDROID_DATA" in os.environ
+        or "com.termux" in os.environ.get("PREFIX", "")
+    )
+
+def use_rich_backend() -> bool:
+    return is_android_terminal()
 
 
 class FirewallSafeVPNDetector:
