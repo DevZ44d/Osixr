@@ -11,7 +11,7 @@ import random
 
 from .detector import FirewallSafeVPNDetector
 from ..Banners.utils import BannerSplitLines, Color
-from osixr.src.osixr.IP.progress import MaigretStyleProgress
+from ..Banners.progress import MaigretStyleProgress
 
 
 def resolve_my_ip(timeout: int = 5) -> str:
