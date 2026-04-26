@@ -4,9 +4,10 @@ import sys
 import time
 import itertools
 import random
-from rich.live  import Live
-from rich.text  import Text
+from rich.live    import Live
+from rich.text    import Text
 from rich.console import Console
+
 
 def _is_android() -> bool:
     return bool(os.environ.get("ANDROID_ROOT") or os.environ.get("ANDROID_DATA"))
@@ -49,15 +50,15 @@ class MaigretStyleProgress:
             self.current -= 1
 
     def _build_line(self) -> str:
-        pct      = self.current / self.total if self.total else 0
-        bar_len  = 40
-        filled   = int(bar_len * pct)
+        pct       = self.current / self.total if self.total else 0
+        bar_len   = 40
+        filled    = int(bar_len * pct)
         sub_chars = " ▏▎▍▌▋▊▉"
         sub_char  = sub_chars[min(int((pct * bar_len - filled) * 8), 7)] if filled < bar_len else ""
-        bar      = "█" * filled + sub_char + " " * (bar_len - filled - len(sub_char))
-        elapsed  = time.perf_counter() - self.start
-        speed    = self.current / elapsed if elapsed > 0 else 0
-        remain   = (self.total - self.current) / speed if speed > 0 else 0
+        bar       = "█" * filled + sub_char + " " * (bar_len - filled - len(sub_char))
+        elapsed   = time.perf_counter() - self.start
+        speed     = self.current / elapsed if elapsed > 0 else 0
+        remain    = (self.total - self.current) / speed if speed > 0 else 0
         b = next(self._braille)
         w = next(self._wave)
         return (
@@ -74,28 +75,37 @@ class MaigretStyleProgress:
             await self._render_tty()
 
     async def _render_tty(self) -> None:
+        # Print a blank safety line above the bar.
+        # When the bar wraps to 2 lines on narrow terminals,
+        # we erase both lines at the end — the safety line
+        # ensures we never accidentally erase output above.
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
         while not self.done:
             self.smooth_tick()
             sys.stdout.write(f"\r\033[2K{self._build_line()}")
             sys.stdout.flush()
             await asyncio.sleep(0.05)
+
         self.current = self.total
         sys.stdout.write(f"\r\033[2K{self._build_line()}")
         sys.stdout.flush()
         await asyncio.sleep(0.08)
+
+        # Erase current line (wrap line 2 or bar line)
         sys.stdout.write("\r\033[2K")
+        # Go up one line and erase it (wrap line 1 or safety line)
+        sys.stdout.write("\033[1A\033[2K")
         sys.stdout.flush()
 
     async def _render_rich(self) -> None:
-
         console = Console()
-
         with Live(console=console, refresh_per_second=20) as live:
             while not self.done:
                 self.smooth_tick()
                 live.update(Text(self._build_line()))
                 await asyncio.sleep(0.05)
-
             self.current = self.total
             live.update(Text(self._build_line()))
             await asyncio.sleep(0.08)
